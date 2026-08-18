@@ -1,0 +1,11 @@
+name = "email-worker"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Email routing binding
+[triggers]
+# Configure in Cloudflare Dashboard → Email Routing → Email Workers
+
+# Secrets (set via: npx wrangler secret put BACKEND_URL / WORKER_SECRET)
+# BACKEND_URL = "https://your-app.com"
+# WORKER_SECRET = "same-as-db-settings"
