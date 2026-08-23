@@ -67,23 +67,24 @@ foreach ($seoPages as $slug => $page) {
 }
 
 Route::get('/sitemap.xml', function () use ($seoPages) {
+    $now = now()->toIso8601String();
     $legalRoutes = ['legal.terms', 'legal.privacy', 'legal.cookies', 'legal.contact'];
 
-    $mainUrls = collect(['home', ...array_map(fn(string $slug): string => "seo.{$slug}", array_keys($seoPages))])
-        ->map(fn(string $route): string => '<url><loc>' . e(route($route)) . '</loc><changefreq>weekly</changefreq><priority>' . ($route === 'home' ? '1.0' : '0.8') . '</priority></url>')
+    $mainUrls = collect(['home', ...array_map(fn (string $slug): string => "seo.{$slug}", array_keys($seoPages))])
+        ->map(fn (string $route): string => '<url><loc>'.e(route($route)).'</loc><lastmod>'.$now.'</lastmod><changefreq>weekly</changefreq><priority>'.($route === 'home' ? '1.0' : '0.8').'</priority></url>')
         ->implode('');
 
     $legalUrls = collect($legalRoutes)
-        ->map(fn(string $route): string => '<url><loc>' . e(route($route)) . '</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>')
+        ->map(fn (string $route): string => '<url><loc>'.e(route($route)).'</loc><lastmod>'.$now.'</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>')
         ->implode('');
 
-    return response("<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">{$mainUrls}{$legalUrls}</urlset>", 200, [
+    return response("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n{$mainUrls}{$legalUrls}\n</urlset>", 200, [
         'Content-Type' => 'application/xml; charset=UTF-8',
     ]);
 })->name('sitemap');
 
 Route::get('/robots.txt', function (): Response {
-    return response("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: " . url('/sitemap.xml') . "\n", 200, [
+    return response("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: ".url('/sitemap.xml')."\n", 200, [
         'Content-Type' => 'text/plain; charset=UTF-8',
     ]);
 })->name('robots');

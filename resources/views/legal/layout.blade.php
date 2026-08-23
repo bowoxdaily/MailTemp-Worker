@@ -4,8 +4,73 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @php
+        $appName = \App\Models\Setting::get('app_name', 'EmailTemp');
+        $pageTitle = ($title ?? 'Legal') . " — {$appName}";
+        $pageDesc = "Halaman {$title} untuk layanan email sementara {$appName}.";
+        $logoUrl = \App\Models\Setting::get('app_logo_url');
+        $faviconUrl = \App\Models\Setting::get('app_favicon_url') ?: asset('favicon.ico');
+    @endphp
+    <title>{{ $pageTitle }}</title>
+    <meta name="description" content="{{ $pageDesc }}">
+    <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#101820">
-    <title>{{ $title ?? 'Legal' }} — {{ \App\Models\Setting::get('app_name', 'EmailTemp') }}</title>
+    <link rel="canonical" href="{{ url()->current() }}">
+    <link rel="icon" href="{{ $faviconUrl }}">
+    @if ($logoUrl)
+        <link rel="apple-touch-icon" href="{{ $logoUrl }}">
+    @endif
+
+    {{-- Open Graph / Facebook --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $appName }}">
+    <meta property="og:title" content="{{ $pageTitle }}">
+    <meta property="og:description" content="{{ $pageDesc }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+
+    {{-- Twitter Card --}}
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ $pageTitle }}">
+    <meta name="twitter:description" content="{{ $pageDesc }}">
+
+    <script type="application/ld+json">
+        {!! json_encode([
+            '@context' => 'https://schema.org',
+            '@graph' => [
+                [
+                    '@type' => 'WebPage',
+                    '@id' => url()->current() . '#webpage',
+                    'url' => url()->current(),
+                    'name' => $pageTitle,
+                    'description' => $pageDesc,
+                    'isPartOf' => [
+                        '@type' => 'WebSite',
+                        '@id' => url('/#website'),
+                        'name' => $appName,
+                        'url' => url('/'),
+                    ],
+                ],
+                [
+                    '@type' => 'BreadcrumbList',
+                    '@id' => url()->current() . '#breadcrumb',
+                    'itemListElement' => [
+                        [
+                            '@type' => 'ListItem',
+                            'position' => 1,
+                            'name' => 'Home',
+                            'item' => url('/'),
+                        ],
+                        [
+                            '@type' => 'ListItem',
+                            'position' => 2,
+                            'name' => $title ?? 'Legal',
+                            'item' => url()->current(),
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {

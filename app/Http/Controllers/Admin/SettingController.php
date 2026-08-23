@@ -42,6 +42,20 @@ class SettingController extends Controller
         return view('admin.settings.cloudflare', compact('settings'));
     }
 
+    public function deployCloudflare(Request $request): RedirectResponse
+    {
+        $exitCode = Artisan::call('cloudflare:setup', ['--deploy' => true]);
+        $output = Artisan::output();
+
+        if ($exitCode === 0) {
+            return redirect()->route('admin.settings.cloudflare')
+                ->with('success', 'Cloudflare Worker deployed successfully! '.$output);
+        }
+
+        return redirect()->route('admin.settings.cloudflare')
+            ->with('error', 'Cloudflare Worker deployment failed: '.$output);
+    }
+
     public function system(): View
     {
         $settings = Setting::all()->keyBy('key');
@@ -67,73 +81,6 @@ class SettingController extends Controller
             'remove_og_image' => 'nullable|boolean',
             'favicon' => 'nullable|file|mimes:ico,png,svg|max:1024',
             'remove_favicon' => 'nullable|boolean',
-        ]);
->>>>>>>
-<?php
-
-namespace App\Http\Controllers\Admin;
-
-use App\Http\Controllers\Controller;
-use App\Models\Setting;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\View\View;
-
-class SettingController extends Controller
-{
-    public function index(): View
-    {
-        $settings = Setting::all()->keyBy('key');
-
-        return view('admin.settings.general', compact('settings'));
-    }
-
-    public function branding(): View
-    {
-        $settings = Setting::all()->keyBy('key');
-
-        return view('admin.settings.branding', compact('settings'));
-    }
-
-    public function ads(): View
-    {
-        $settings = Setting::all()->keyBy('key');
-
-        return view('admin.settings.ads', compact('settings'));
-    }
-
-    public function cloudflare(): View
-    {
-        $settings = Setting::all()->keyBy('key');
-
-        return view('admin.settings.cloudflare', compact('settings'));
-    }
-
-    public function system(): View
-    {
-        $settings = Setting::all()->keyBy('key');
-
-        $lastRun = Cache::get('scheduler:last_run');
-        $schedulerStatus = [
-            'last_run' => $lastRun ? Carbon::parse($lastRun) : null,
-            'is_running' => $lastRun && Carbon::parse($lastRun)->diffInMinutes(now()) < 5,
-            'cron_command' => '* * * * * cd '.base_path().' && php artisan schedule:run >> /dev/null 2>&1',
-        ];
-
-        return view('admin.settings.system', compact('settings', 'schedulerStatus'));
-    }
-
-    public function update(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'settings' => 'nullable|array',
-            'settings.*' => 'nullable|string|max:10000',
-            'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
-            'remove_logo' => 'nullable|boolean',
         ]);
 
         if ($request->has('settings')) {
@@ -195,3 +142,7 @@ class SettingController extends Controller
             $path = $request->file('favicon')->store('branding', 'public');
             Setting::set('favicon_url', Storage::url($path));
         }
+
+        return redirect()->route('admin.settings.index')->with('success', 'Settings updated successfully.');
+    }
+}

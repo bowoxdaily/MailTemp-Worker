@@ -5,24 +5,48 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="description"
-        content="Email sementara gratis untuk OTP, testing, dan inbox sekali pakai tanpa registrasi.">
+    @php
+        $appName = \App\Models\Setting::get('app_name', 'EmailTemp');
+        $metaTitle = \App\Models\Setting::get('meta_title') ?: "{$appName} — Email Sementara Gratis Tanpa Registrasi";
+        $metaDescription =
+            \App\Models\Setting::get('meta_description') ?:
+            'Email sementara gratis, aman, dan instan untuk verifikasi OTP, testing aplikasi, dan melindungi inbox pribadi tanpa registrasi.';
+        $metaKeywords =
+            \App\Models\Setting::get('meta_keywords') ?:
+            'temp mail, temporary email, email sementara, 10 minute mail, disposable email, generator email, otp email, fake mail';
+        $logoUrl = \App\Models\Setting::get('app_logo_url');
+        $faviconUrl = \App\Models\Setting::get('app_favicon_url') ?: asset('favicon.ico');
+    @endphp
+    <title>{{ $metaTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    <meta name="keywords" content="{{ $metaKeywords }}">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="author" content="{{ $appName }}">
     <meta name="theme-color" content="#00a8e8" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
     <link rel="canonical" href="{{ url('/') }}">
+    <link rel="icon" href="{{ $faviconUrl }}">
+    @if ($logoUrl)
+        <link rel="apple-touch-icon" href="{{ $logoUrl }}">
+    @endif
+
+    {{-- Open Graph / Facebook --}}
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}">
-    <meta property="og:title"
-        content="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }} — Email sementara tanpa registrasi">
-    <meta property="og:description"
-        content="Email sementara gratis untuk OTP, testing, dan inbox sekali pakai tanpa registrasi.">
+    <meta property="og:site_name" content="{{ $appName }}">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:url" content="{{ url('/') }}">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title"
-        content="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }} — Email sementara tanpa registrasi">
-    <meta name="twitter:description"
-        content="Email sementara gratis untuk OTP, testing, dan inbox sekali pakai tanpa registrasi.">
-    <title>{{ \App\Models\Setting::get('app_name', 'EmailTemp') }} — Email sementara tanpa registrasi</title>
+    @if ($logoUrl)
+        <meta property="og:image" content="{{ $logoUrl }}">
+    @endif
+
+    {{-- Twitter Card --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $metaTitle }}">
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    @if ($logoUrl)
+        <meta name="twitter:image" content="{{ $logoUrl }}">
+    @endif
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,13 +234,37 @@
     <script type="application/ld+json">
         {!! json_encode([
             '@context' => 'https://schema.org',
-            '@type' => 'WebApplication',
-            'name' => \App\Models\Setting::get('app_name', 'EmailTemp'),
-            'url' => url('/'),
-            'applicationCategory' => 'UtilitiesApplication',
-            'operatingSystem' => 'Web',
-            'description' => 'Email sementara gratis untuk OTP, testing, dan inbox sekali pakai tanpa registrasi.',
-            'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'USD'],
+            '@graph' => [
+                [
+                    '@type' => 'WebApplication',
+                    '@id' => url('/#webapp'),
+                    'name' => $appName,
+                    'url' => url('/'),
+                    'applicationCategory' => 'UtilitiesApplication',
+                    'operatingSystem' => 'Web Browser',
+                    'description' => $metaDescription,
+                    'offers' => [
+                        '@type' => 'Offer',
+                        'price' => '0',
+                        'priceCurrency' => 'USD',
+                    ],
+                ],
+                [
+                    '@type' => 'WebSite',
+                    '@id' => url('/#website'),
+                    'url' => url('/'),
+                    'name' => $appName,
+                    'description' => $metaDescription,
+                    'inLanguage' => 'id-ID',
+                ],
+                [
+                    '@type' => 'Organization',
+                    '@id' => url('/#organization'),
+                    'name' => $appName,
+                    'url' => url('/'),
+                    'logo' => $logoUrl ?: url('/favicon.ico'),
+                ],
+            ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
     </script>
 </head>
@@ -279,7 +327,8 @@
                     <a href="{{ route('home') }}"
                         class="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-500/20 hover:shadow-brand-500/30 transition-all">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4v16m8-8H4" />
                         </svg>
                         Buat Baru
                     </a>

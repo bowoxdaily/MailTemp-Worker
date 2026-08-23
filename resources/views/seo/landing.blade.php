@@ -4,23 +4,42 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="{{ $page['description'] }}">
-    <meta name="theme-color" content="#101820">
-    <link rel="canonical" href="{{ url()->current() }}">
-    <meta property="og:type" content="website">
     @php
         $appName = \App\Models\Setting::get('app_name', 'EmailTemp');
         $logoUrl = \App\Models\Setting::get('app_logo_url');
         $logoHeight = (int) \App\Models\Setting::get('app_logo_height', 32);
+        $faviconUrl = \App\Models\Setting::get('app_favicon_url') ?: asset('favicon.ico');
     @endphp
+    <title>{{ $page['title'] }} | {{ $appName }}</title>
+    <meta name="description" content="{{ $page['description'] }}">
+    <meta name="keywords"
+        content="{{ strtolower($page['name']) }}, temporary email, temp mail, disposable email, generator email, otp email">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="author" content="{{ $appName }}">
+    <meta name="theme-color" content="#101820">
+    <link rel="canonical" href="{{ url()->current() }}">
+    <link rel="icon" href="{{ $faviconUrl }}">
+    @if ($logoUrl)
+        <link rel="apple-touch-icon" href="{{ $logoUrl }}">
+    @endif
+
+    {{-- Open Graph / Facebook --}}
+    <meta property="og:type" content="article">
     <meta property="og:site_name" content="{{ $appName }}">
     <meta property="og:title" content="{{ $page['title'] }}">
     <meta property="og:description" content="{{ $page['description'] }}">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta name="twitter:card" content="summary">
+    @if ($logoUrl)
+        <meta property="og:image" content="{{ $logoUrl }}">
+    @endif
+
+    {{-- Twitter Card --}}
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $page['title'] }}">
     <meta name="twitter:description" content="{{ $page['description'] }}">
-    <title>{{ $page['title'] }} | {{ $appName }}</title>
+    @if ($logoUrl)
+        <meta name="twitter:image" content="{{ $logoUrl }}">
+    @endif
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -83,12 +102,14 @@
                 </details>
                 <details class="rounded-xl border border-slate-200 bg-white p-5">
                     <summary class="cursor-pointer font-bold">Berapa lama email bisa digunakan?</summary>
-                    <p class="mt-3 leading-7 text-slate-600">Durasi tersedia 10 menit, 30 menit, dan 1 jam. Alamat serta
+                    <p class="mt-3 leading-7 text-slate-600">Durasi tersedia 10 menit, 30 menit, dan 1 jam. Alamat
+                        serta
                         pesan dihapus otomatis setelah masa aktif berakhir.</p>
                 </details>
                 <details class="rounded-xl border border-slate-200 bg-white p-5">
                     <summary class="cursor-pointer font-bold">Untuk apa temporary email digunakan?</summary>
-                    <p class="mt-3 leading-7 text-slate-600">Untuk OTP, verifikasi, testing email, dan situasi saat Anda
+                    <p class="mt-3 leading-7 text-slate-600">Untuk OTP, verifikasi, testing email, dan situasi saat
+                        Anda
                         tidak ingin memberikan alamat email utama.</p>
                 </details>
             </div>
@@ -114,11 +135,69 @@
     <script type="application/ld+json">
         {!! json_encode([
             '@context' => 'https://schema.org',
-            '@type' => 'FAQPage',
-            'mainEntity' => [
-                ['@type' => 'Question', 'name' => "Apakah {$page['name']} perlu registrasi?", 'acceptedAnswer' => ['@type' => 'Answer', 'text' => 'Tidak. ' . $appName . ' membuat alamat sementara tanpa akun dan tanpa password.']],
-                ['@type' => 'Question', 'name' => 'Berapa lama email bisa digunakan?', 'acceptedAnswer' => ['@type' => 'Answer', 'text' => 'Durasi tersedia 10 menit, 30 menit, dan 1 jam. Alamat serta pesan dihapus otomatis setelah masa aktif berakhir.']],
-                ['@type' => 'Question', 'name' => 'Untuk apa temporary email digunakan?', 'acceptedAnswer' => ['@type' => 'Answer', 'text' => 'Untuk OTP, verifikasi, testing email, dan situasi saat Anda tidak ingin memberikan alamat email utama.']],
+            '@graph' => [
+                [
+                    '@type' => 'WebPage',
+                    '@id' => url()->current() . '#webpage',
+                    'url' => url()->current(),
+                    'name' => $page['title'],
+                    'description' => $page['description'],
+                    'isPartOf' => [
+                        '@type' => 'WebSite',
+                        '@id' => url('/#website'),
+                        'name' => $appName,
+                        'url' => url('/'),
+                    ],
+                    'inLanguage' => 'id-ID',
+                ],
+                [
+                    '@type' => 'BreadcrumbList',
+                    '@id' => url()->current() . '#breadcrumb',
+                    'itemListElement' => [
+                        [
+                            '@type' => 'ListItem',
+                            'position' => 1,
+                            'name' => 'Home',
+                            'item' => url('/'),
+                        ],
+                        [
+                            '@type' => 'ListItem',
+                            'position' => 2,
+                            'name' => $page['name'],
+                            'item' => url()->current(),
+                        ],
+                    ],
+                ],
+                [
+                    '@type' => 'FAQPage',
+                    '@id' => url()->current() . '#faq',
+                    'mainEntity' => [
+                        [
+                            '@type' => 'Question',
+                            'name' => "Apakah {$page['name']} perlu registrasi?",
+                            'acceptedAnswer' => [
+                                '@type' => 'Answer',
+                                'text' => 'Tidak. ' . $appName . ' membuat alamat sementara tanpa akun dan tanpa password.',
+                            ],
+                        ],
+                        [
+                            '@type' => 'Question',
+                            'name' => 'Berapa lama email bisa digunakan?',
+                            'acceptedAnswer' => [
+                                '@type' => 'Answer',
+                                'text' => 'Durasi tersedia 10 menit, 30 menit, dan 1 jam. Alamat serta pesan dihapus otomatis setelah masa aktif berakhir.',
+                            ],
+                        ],
+                        [
+                            '@type' => 'Question',
+                            'name' => 'Untuk apa temporary email digunakan?',
+                            'acceptedAnswer' => [
+                                '@type' => 'Answer',
+                                'text' => 'Untuk OTP, verifikasi, testing email, dan situasi saat Anda tidak ingin memberikan alamat email utama.',
+                            ],
+                        ],
+                    ],
+                ],
             ],
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
     </script>
