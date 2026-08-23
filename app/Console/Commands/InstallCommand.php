@@ -122,6 +122,7 @@ class InstallCommand extends Command
             storage_path('framework/views'),
             storage_path('logs'),
             base_path('bootstrap/cache'),
+            base_path('cloudflare/email-worker'),
         ];
 
         $failed = [];

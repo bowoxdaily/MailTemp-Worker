@@ -70,23 +70,44 @@ class CloudflareSetupCommand extends Command
         $devVarsPath = $workerDir.'/.dev.vars';
 
         if (! is_dir($workerDir)) {
+            @mkdir($workerDir, 0775, true);
+        }
+
+        if (! is_dir($workerDir)) {
             $this->error("Cloudflare worker directory not found at {$workerDir}");
 
             return self::FAILURE;
         }
 
+        // Try fixing permissions if not writable
+        if (! is_writable($workerDir)) {
+            @chmod($workerDir, 0775);
+        }
+        if (file_exists($devVarsPath) && ! is_writable($devVarsPath)) {
+            @chmod($devVarsPath, 0664);
+        }
+
         $devVarsContent = "BACKEND_URL={$backendUrl}\nWORKER_SECRET={$secret}\n";
 
-        if (file_put_contents($devVarsPath, $devVarsContent) !== false) {
+        $writeResult = @file_put_contents($devVarsPath, $devVarsContent);
+        if ($writeResult !== false) {
             $this->info("Successfully generated local development vars file at {$devVarsPath}");
         } else {
-            $this->error("Failed to write to {$devVarsPath}");
-
-            return self::FAILURE;
+            $this->warn("Could not write to {$devVarsPath} (permission denied). Continuing deployment...");
         }
 
         // 4. Handle Deployment if --deploy option is set
         if ($this->option('deploy')) {
+            if (! function_exists('proc_open')) {
+                $this->error('PHP function "proc_open" is disabled or unavailable on this server.');
+                $this->line('aaPanel/cPanel solution:');
+                $this->line('1. Open aaPanel -> App Store -> PHP-8.x Settings -> Disabled functions.');
+                $this->line('2. Find and delete "proc_open" (and "putenv" / "exec" if needed) from disabled functions.');
+                $this->line('3. Restart PHP service, then retry deploying.');
+
+                return self::FAILURE;
+            }
+
             $this->info('Deploying secrets to Cloudflare...');
 
             // Use local wrangler from node_modules to avoid npx PATH issues
@@ -121,7 +142,47 @@ class CloudflareSetupCommand extends Command
                 $accountId = env('CLOUDFLARE_ACCOUNT_ID');
             }
 
-            // Merge Cloudflare credentials with current system env so PATH/node remain available
+            // Find modern Node.js binary path (aaPanel / nvm / standard paths)
+            $nodePaths = [
+                '/www/server/nodejs/v22.*/bin',
+                '/www/server/nodejs/v20.*/bin',
+                '/www/server/nodejs/v18.*/bin',
+                '/www/server/nvm/versions/node/v22.*/bin',
+                '/www/server/nvm/versions/node/v20.*/bin',
+                '/www/server/nvm/versions/node/v18.*/bin',
+                '/root/.nvm/versions/node/v22.*/bin',
+                '/root/.nvm/versions/node/v20.*/bin',
+                '/root/.nvm/versions/node/v18.*/bin',
+                '/home/*/.nvm/versions/node/v22.*/bin',
+                '/home/*/.nvm/versions/node/v20.*/bin',
+                '/home/*/.nvm/versions/node/v18.*/bin',
+                '/usr/local/bin',
+                '/usr/bin',
+            ];
+            $extraPaths = [];
+            $preferredNodeBin = null;
+
+            foreach ($nodePaths as $pattern) {
+                $matches = glob($pattern);
+                if ($matches) {
+                    rsort($matches);
+                    foreach ($matches as $match) {
+                        $candidateNode = $match.DIRECTORY_SEPARATOR.'node';
+                        if (is_dir($match) && file_exists($candidateNode)) {
+                            $extraPaths[] = $match;
+                            if (! $preferredNodeBin) {
+                                // Check candidate version
+                                $testVer = @shell_exec("{$candidateNode} -v 2>&1");
+                                if ($testVer && preg_match('/v(\d+)/', $testVer, $m) && (int) $m[1] >= 16) {
+                                    $preferredNodeBin = $candidateNode;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Merge Cloudflare credentials and extended PATH
             $env = getenv();
             if (is_array($env) === false) {
                 $env = [];
@@ -131,6 +192,16 @@ class CloudflareSetupCommand extends Command
             }
             if (! empty($accountId)) {
                 $env['CLOUDFLARE_ACCOUNT_ID'] = $accountId;
+            }
+            $currentPath = $env['PATH'] ?? (getenv('PATH') ?: '');
+            if (! empty($extraPaths)) {
+                $env['PATH'] = implode(PATH_SEPARATOR, array_unique(array_merge($extraPaths, explode(PATH_SEPARATOR, $currentPath))));
+            }
+
+            // If we have a verified node >= 16 binary, invoke wrangler entry script with it directly to bypass old system node
+            $wranglerJs = $workerDir.'/node_modules/wrangler/bin/wrangler.js';
+            if ($preferredNodeBin && file_exists($wranglerJs) && ! $isWindows) {
+                $wrangler = "{$preferredNodeBin} {$wranglerJs}";
             }
 
             // Deploy BACKEND_URL secret
