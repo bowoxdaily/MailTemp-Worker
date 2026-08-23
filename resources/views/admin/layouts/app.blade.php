@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin') — EmailTemp</title>
+    <title>@yield('title', 'Admin') — {{ \App\Models\Setting::get('app_name', 'EmailTemp') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -45,13 +45,20 @@
 
             {{-- Logo --}}
             <div class="flex items-center gap-3 px-6 h-16 border-b border-white/10">
-                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                </div>
-                <span class="text-white font-bold text-lg tracking-tight">EmailTemp</span>
+                @if (\App\Models\Setting::get('app_logo_url'))
+                    <img src="{{ \App\Models\Setting::get('app_logo_url') }}"
+                        alt="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}"
+                        style="height: {{ (int) \App\Models\Setting::get('app_logo_height', 32) }}px; width: auto; max-height: 48px;">
+                @else
+                    <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <span
+                        class="text-white font-bold text-lg tracking-tight truncate">{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}</span>
+                @endif
             </div>
 
             {{-- Navigation --}}
@@ -96,16 +103,69 @@
                     Abuse
                 </a>
 
+                {{-- Settings Section Divider --}}
+                <div class="pt-4 pb-1">
+                    <p class="px-3 text-[11px] font-bold uppercase tracking-wider text-indigo-300/60">Settings & Config
+                    </p>
+                </div>
+
+                {{-- General Settings --}}
                 <a href="{{ route('admin.settings.index') }}"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
-                    {{ request()->routeIs('admin.settings.*') ? 'bg-white/20 text-white shadow-lg shadow-indigo-900/20' : 'text-indigo-200 hover:bg-white/10 hover:text-white' }}">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150
+                    {{ request()->routeIs('admin.settings.index') ? 'bg-white/20 text-white shadow-lg shadow-indigo-900/20' : 'text-indigo-200 hover:bg-white/10 hover:text-white' }}">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    Settings
+                    General
+                </a>
+
+                {{-- Branding Settings --}}
+                <a href="{{ route('admin.settings.branding') }}"
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150
+                    {{ request()->routeIs('admin.settings.branding') ? 'bg-white/20 text-white shadow-lg shadow-indigo-900/20' : 'text-indigo-200 hover:bg-white/10 hover:text-white' }}">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    Branding
+                </a>
+
+                {{-- Ads Placement --}}
+                <a href="{{ route('admin.settings.ads') }}"
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150
+                    {{ request()->routeIs('admin.settings.ads') ? 'bg-white/20 text-white shadow-lg shadow-indigo-900/20' : 'text-indigo-200 hover:bg-white/10 hover:text-white' }}">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    </svg>
+                    Ad Placements
+                </a>
+
+                {{-- Cloudflare & Worker --}}
+                <a href="{{ route('admin.settings.cloudflare') }}"
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150
+                    {{ request()->routeIs('admin.settings.cloudflare') ? 'bg-white/20 text-white shadow-lg shadow-indigo-900/20' : 'text-indigo-200 hover:bg-white/10 hover:text-white' }}">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z" />
+                    </svg>
+                    Cloudflare Worker
+                </a>
+
+                {{-- System & Scheduler --}}
+                <a href="{{ route('admin.settings.system') }}"
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150
+                    {{ request()->routeIs('admin.settings.system') ? 'bg-white/20 text-white shadow-lg shadow-indigo-900/20' : 'text-indigo-200 hover:bg-white/10 hover:text-white' }}">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    System & Cron
                 </a>
             </nav>
 

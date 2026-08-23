@@ -88,9 +88,10 @@ test('it deploys secrets and worker when --deploy is provided', function () {
     Setting::updateOrCreate(['key' => 'cloudflare_account_id'], ['value' => 'test-account-id']);
 
     Process::fake([
-        '*wrangler secret put BACKEND_URL*' => Process::result('', '', 0),
-        '*wrangler secret put WORKER_SECRET*' => Process::result('', '', 0),
-        '*wrangler deploy*' => Process::result('Deployed to cloudflare successfully', '', 0),
+        '*npm install*' => Process::result('', '', 0),
+        '*wrangler* secret put BACKEND_URL*' => Process::result('', '', 0),
+        '*wrangler* secret put WORKER_SECRET*' => Process::result('', '', 0),
+        '*wrangler* deploy*' => Process::result('Deployed to cloudflare successfully', '', 0),
     ]);
 
     artisan('cloudflare:setup --deploy')
@@ -102,23 +103,23 @@ test('it deploys secrets and worker when --deploy is provided', function () {
         ->expectsOutput('Cloudflare Worker deployed successfully!')
         ->assertExitCode(0);
 
-    // Verify Process calls
+    // Verify Process calls (use 'secret put' to match both wrangler and wrangler.cmd)
     Process::assertRan(function ($process) {
-        return str_contains($process->command, 'wrangler secret put BACKEND_URL')
+        return str_contains($process->command, 'secret put BACKEND_URL')
             && $process->input === 'https://example.com'
             && ($process->environment['CLOUDFLARE_API_TOKEN'] ?? null) === 'test-api-token'
             && ($process->environment['CLOUDFLARE_ACCOUNT_ID'] ?? null) === 'test-account-id';
     });
 
     Process::assertRan(function ($process) {
-        return str_contains($process->command, 'wrangler secret put WORKER_SECRET')
+        return str_contains($process->command, 'secret put WORKER_SECRET')
             && $process->input === 'deploy-secret'
             && ($process->environment['CLOUDFLARE_API_TOKEN'] ?? null) === 'test-api-token'
             && ($process->environment['CLOUDFLARE_ACCOUNT_ID'] ?? null) === 'test-account-id';
     });
 
     Process::assertRan(function ($process) {
-        return str_contains($process->command, 'wrangler deploy')
+        return str_contains($process->command, 'wrangler') && str_contains($process->command, 'deploy')
             && ($process->environment['CLOUDFLARE_API_TOKEN'] ?? null) === 'test-api-token'
             && ($process->environment['CLOUDFLARE_ACCOUNT_ID'] ?? null) === 'test-account-id';
     });

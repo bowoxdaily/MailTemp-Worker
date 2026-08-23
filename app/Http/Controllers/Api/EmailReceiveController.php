@@ -7,14 +7,25 @@ use App\Jobs\ProcessIncomingEmail;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class EmailReceiveController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        // Validate worker secret
         $secret = Setting::get('cloudflare_worker_secret');
-        if (! $secret || $request->header('X-Worker-Secret') !== $secret) {
+        $timestamp = $request->header('X-Worker-Timestamp');
+        $signature = $request->header('X-Worker-Signature');
+        $body = $request->getContent();
+        $expected = $secret && $timestamp
+            ? hash_hmac('sha256', $timestamp.'.'.$body, $secret)
+            : null;
+
+        if (
+            ! $secret || ! ctype_digit((string) $timestamp) || abs(time() - (int) $timestamp) > 300
+            || ! $signature || ! $expected || ! hash_equals($expected, $signature)
+            || ! Cache::add('worker-request:'.$signature, true, now()->addMinutes(5))
+        ) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
@@ -22,15 +33,15 @@ class EmailReceiveController extends Controller
             'from' => 'required|email',
             'to' => 'required|email',
             'subject' => 'nullable|string|max:998',
-            'body_html' => 'nullable|string',
-            'body_text' => 'nullable|string',
+            'body_html' => 'nullable|string|max:500000',
+            'body_text' => 'nullable|string|max:500000',
             'from_name' => 'nullable|string|max:255',
-            'size' => 'nullable|integer',
-            'attachments' => 'nullable|array',
-            'attachments.*.filename' => 'required|string',
-            'attachments.*.mime_type' => 'required|string',
-            'attachments.*.size' => 'required|integer',
-            'attachments.*.content' => 'required|string',
+            'size' => 'nullable|integer|min:0|max:52428800',
+            'attachments' => 'nullable|array|max:10',
+            'attachments.*.filename' => ['required', 'string', 'max:255', 'regex:/^[^\\\/]+$/'],
+            'attachments.*.mime_type' => 'required|string|max:127',
+            'attachments.*.size' => 'required|integer|min:0|max:5242880',
+            'attachments.*.content' => 'required|string|max:6990508',
         ]);
 
         ProcessIncomingEmail::dispatch($request->all());

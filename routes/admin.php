@@ -23,6 +23,7 @@ Route::prefix('admin')->group(function () {
 
         Route::get('emails', [EmailMonitorController::class, 'index'])->name('admin.emails.index');
         Route::get('emails/{email}', [EmailMonitorController::class, 'show'])->name('admin.emails.show');
+        Route::delete('emails/{email}', [EmailMonitorController::class, 'destroy'])->name('admin.emails.destroy');
 
         Route::get('abuse', [AbuseController::class, 'index'])->name('admin.abuse.index');
         Route::post('abuse/block-sender', [AbuseController::class, 'blockSender'])->name('admin.abuse.block-sender');
@@ -31,6 +32,10 @@ Route::prefix('admin')->group(function () {
         Route::delete('abuse/unblock-domain/{blockedDomain}', [AbuseController::class, 'unblockDomain'])->name('admin.abuse.unblock-domain');
 
         Route::get('settings', [SettingController::class, 'index'])->name('admin.settings.index');
+        Route::get('settings/branding', [SettingController::class, 'branding'])->name('admin.settings.branding');
+        Route::get('settings/ads', [SettingController::class, 'ads'])->name('admin.settings.ads');
+        Route::get('settings/cloudflare', [SettingController::class, 'cloudflare'])->name('admin.settings.cloudflare');
+        Route::get('settings/system', [SettingController::class, 'system'])->name('admin.settings.system');
         Route::put('settings', [SettingController::class, 'update'])->name('admin.settings.update');
         Route::post('settings/cloudflare-deploy', [SettingController::class, 'deployCloudflare'])->name('admin.settings.cloudflare-deploy');
     });

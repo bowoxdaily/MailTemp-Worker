@@ -31,7 +31,7 @@ test('admin can trigger cloudflare worker deploy successfully', function () {
 
     actingAs(createAdmin())
         ->post(route('admin.settings.cloudflare-deploy'))
-        ->assertRedirect(route('admin.settings.index'))
+        ->assertRedirect(route('admin.settings.cloudflare'))
         ->assertSessionHas('success');
 });
 
@@ -48,6 +48,6 @@ test('admin handles cloudflare worker deploy failure', function () {
 
     actingAs(createAdmin())
         ->post(route('admin.settings.cloudflare-deploy'))
-        ->assertRedirect(route('admin.settings.index'))
+        ->assertRedirect(route('admin.settings.cloudflare'))
         ->assertSessionHas('error');
 });

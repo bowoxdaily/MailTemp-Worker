@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\TemporaryEmailService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InboxController extends Controller
 {
@@ -53,6 +55,33 @@ class InboxController extends Controller
             'success' => true,
             'message' => $email,
         ]);
+    }
+
+    public function attachment(string $token, int $id, int $attachmentId): StreamedResponse|JsonResponse
+    {
+        $temporaryEmail = $this->service->findByToken($token);
+
+        if (! $temporaryEmail) {
+            return response()->json(['success' => false, 'message' => 'Not found or expired.'], 404);
+        }
+
+        $email = $temporaryEmail->emails()->find($id);
+
+        if (! $email) {
+            return response()->json(['success' => false, 'message' => 'Email not found.'], 404);
+        }
+
+        $attachment = $email->attachments()->find($attachmentId);
+
+        if (! $attachment || ! Storage::exists($attachment->storage_path)) {
+            return response()->json(['success' => false, 'message' => 'Attachment not found.'], 404);
+        }
+
+        return Storage::download(
+            $attachment->storage_path,
+            $attachment->filename,
+            ['Content-Type' => $attachment->mime_type]
+        );
     }
 
     public function destroy(string $token, int $id): JsonResponse

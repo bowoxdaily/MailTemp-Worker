@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Email;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -29,5 +30,13 @@ class EmailMonitorController extends Controller
         $email->load('temporaryEmail.domain', 'attachments');
 
         return view('admin.emails.show', compact('email'));
+    }
+
+    public function destroy(Email $email): RedirectResponse
+    {
+        $email->attachments()->delete();
+        $email->delete();
+
+        return redirect()->route('admin.emails.index')->with('success', 'Email deleted.');
     }
 }

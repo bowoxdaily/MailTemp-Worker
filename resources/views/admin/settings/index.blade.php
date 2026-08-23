@@ -35,7 +35,12 @@
                             <p class="text-xs text-slate-400 font-mono mt-0.5">{{ $key }}</p>
                         </div>
                         <div class="sm:flex-1">
-                            @if (in_array($key, ['cloudflare_worker_secret', 'cloudflare_api_token']))
+                            @if (in_array($key, ['ad_header', 'ad_generator', 'ad_inbox', 'ad_footer']))
+                                <textarea name="settings[{{ $key }}]" id="setting-{{ $key }}" rows="5"
+                                    placeholder="Paste ad script here..."
+                                    class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">{{ $setting->value }}</textarea>
+                                <p class="mt-1 text-xs text-slate-400">Paste full ad code. Leave empty to disable slot.</p>
+                            @elseif (in_array($key, ['cloudflare_worker_secret', 'cloudflare_api_token']))
                                 <div x-data="{ show: false }" class="relative">
                                     <input :type="show ? 'text' : 'password'" name="settings[{{ $key }}]"
                                         id="setting-{{ $key }}" value="{{ $setting->value }}"
@@ -57,8 +62,8 @@
                                     </button>
                                 </div>
                             @else
-                                <input type="text" name="settings[{{ $key }}]" id="setting-{{ $key }}"
-                                    value="{{ $setting->value }}"
+                                <input type="text" name="settings[{{ $key }}]"
+                                    id="setting-{{ $key }}" value="{{ $setting->value }}"
                                     class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
                             @endif
                         </div>
@@ -101,6 +106,105 @@
                     Deploy Cloudflare Worker
                 </button>
             </form>
+        </div>
+    </div>
+
+    {{-- Scheduler & Crontab --}}
+    <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden mt-6">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="text-base font-semibold text-slate-800">Scheduler & Crontab</h2>
+            <p class="text-sm text-slate-500 mt-0.5">Status scheduler dan panduan konfigurasi crontab untuk server
+                production.</p>
+        </div>
+
+        <div class="px-6 py-4 space-y-5">
+            {{-- Status --}}
+            <div class="flex items-center gap-3">
+                @if ($schedulerStatus['is_running'])
+                    <span class="relative flex h-3 w-3">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <div>
+                        <p class="text-sm font-medium text-emerald-700">Scheduler Active</p>
+                        <p class="text-xs text-slate-500">Last run: {{ $schedulerStatus['last_run']->diffForHumans() }}
+                            ({{ $schedulerStatus['last_run']->format('d M Y H:i:s') }})</p>
+                    </div>
+                @else
+                    <span class="relative flex h-3 w-3">
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                    </span>
+                    <div>
+                        <p class="text-sm font-medium text-rose-700">Scheduler Not Running</p>
+                        <p class="text-xs text-slate-500">
+                            @if ($schedulerStatus['last_run'])
+                                Last run: {{ $schedulerStatus['last_run']->diffForHumans() }}
+                            @else
+                                Belum pernah dijalankan
+                            @endif
+                        </p>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Crontab Guide --}}
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-slate-700">Panduan Setup Crontab</h3>
+                <p class="text-sm text-slate-600">Jalankan perintah berikut di terminal server untuk membuka crontab editor:
+                </p>
+                <div class="relative" x-data="{ copied: false }">
+                    <pre class="text-xs font-mono bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto select-all">crontab -e</pre>
+                </div>
+                <p class="text-sm text-slate-600">Tambahkan baris berikut di akhir file:</p>
+                <div class="relative" x-data="{ copied: false }">
+                    <pre class="text-xs font-mono bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto select-all">{{ $schedulerStatus['cron_command'] }}</pre>
+                    <button type="button"
+                        @click="navigator.clipboard.writeText('{{ $schedulerStatus['cron_command'] }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="absolute top-2 right-2 px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs text-slate-300 transition-colors">
+                        <span x-show="!copied">Copy</span>
+                        <span x-show="copied" x-cloak>Copied!</span>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500">Simpan dan tutup editor. Scheduler akan berjalan otomatis setiap menit.
+                </p>
+            </div>
+
+            {{-- Cleanup Interval --}}
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-slate-700">Cleanup Interval</h3>
+                <p class="text-sm text-slate-600">Interval pembersihan email kedaluwarsa (dalam menit). Nilai saat ini bisa
+                    diubah di bagian <strong>Application Settings</strong> di atas pada field <code
+                        class="text-xs bg-slate-200 px-1 py-0.5 rounded">cleanup_interval_minutes</code>.</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-slate-700">Interval saat ini:</span>
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                        {{ $settings['cleanup_interval_minutes']->value ?? '1' }} menit
+                    </span>
+                </div>
+            </div>
+
+            {{-- Supervisor Guide --}}
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-slate-700">Queue Worker (Supervisor)</h3>
+                <p class="text-sm text-slate-600">Untuk production, gunakan Supervisor agar queue worker berjalan
+                    terus-menerus:</p>
+                <pre class="text-xs font-mono bg-slate-900 text-slate-100 p-3 rounded-lg overflow-x-auto select-all">[program:tempmail-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php {{ base_path() }}/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile={{ storage_path('logs/worker.log') }}
+stopwaitsecs=3600</pre>
+                <p class="text-xs text-slate-500">Simpan di <code
+                        class="bg-slate-200 px-1 py-0.5 rounded">/etc/supervisor/conf.d/tempmail-worker.conf</code>, lalu
+                    jalankan <code class="bg-slate-200 px-1 py-0.5 rounded">supervisorctl reread && supervisorctl
+                        update</code>.</p>
+            </div>
         </div>
     </div>
 @endsection

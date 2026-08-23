@@ -12,6 +12,20 @@
 import PostalMime from 'postal-mime';
 
 export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname !== '/health') {
+      return new Response('Not Found', { status: 404 });
+    }
+
+    return Response.json({
+      status: 'ok',
+      backend_configured: Boolean(env.BACKEND_URL?.trim()),
+      secret_configured: Boolean(env.WORKER_SECRET?.trim()),
+    });
+  },
+
   async email(message, env) {
     let stage = 'start';
 
@@ -49,11 +63,14 @@ export default {
         throw new Error('BACKEND_URL or WORKER_SECRET is not configured');
       }
 
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+
       const response = await fetch(`${backendUrl}/api/worker/receive`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Worker-Secret': workerSecret,
+          'X-Worker-Timestamp': timestamp,
+          'X-Worker-Signature': await sign(`${timestamp}.${JSON.stringify(payload)}`, workerSecret),
           'Accept': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -80,4 +97,12 @@ function toBase64(content) {
   }
 
   return btoa(binary);
+}
+
+async function sign(value, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  return [...new Uint8Array(signature)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }

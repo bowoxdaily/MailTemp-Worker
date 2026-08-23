@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin Login — EmailTemp</title>
+    <title>Admin Login — {{ \App\Models\Setting::get('app_name', 'EmailTemp') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -31,14 +31,23 @@
                 <div class="absolute bottom-20 right-20 w-96 h-96 bg-indigo-300 rounded-full blur-3xl"></div>
             </div>
             <div class="relative z-10 text-center px-12">
-                <div
-                    class="w-20 h-20 mx-auto rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-8 shadow-2xl shadow-indigo-900/30">
-                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                </div>
-                <h2 class="text-3xl font-bold text-white mb-3">EmailTemp</h2>
+                @if (\App\Models\Setting::get('app_logo_url'))
+                    <div class="mb-8 flex justify-center">
+                        <img src="{{ \App\Models\Setting::get('app_logo_url') }}"
+                            alt="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}"
+                            style="height: {{ max(48, (int) \App\Models\Setting::get('app_logo_height', 48)) }}px; width: auto; max-height: 80px;">
+                    </div>
+                @else
+                    <div
+                        class="w-20 h-20 mx-auto rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-8 shadow-2xl shadow-indigo-900/30">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                @endif
+                <h2 class="text-3xl font-bold text-white mb-3">{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}
+                </h2>
                 <p class="text-indigo-200 text-lg leading-relaxed max-w-sm mx-auto">Administration panel for managing
                     temporary email services</p>
             </div>
@@ -49,14 +58,23 @@
             <div class="w-full max-w-md">
                 {{-- Mobile logo --}}
                 <div class="lg:hidden text-center mb-8">
-                    <div class="w-14 h-14 mx-auto rounded-xl flex items-center justify-center mb-4 shadow-lg"
-                        style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
-                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <h2 class="text-xl font-bold text-slate-800">EmailTemp</h2>
+                    @if (\App\Models\Setting::get('app_logo_url'))
+                        <div class="mb-4 flex justify-center">
+                            <img src="{{ \App\Models\Setting::get('app_logo_url') }}"
+                                alt="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}"
+                                style="height: {{ (int) \App\Models\Setting::get('app_logo_height', 36) }}px; width: auto; max-height: 60px;">
+                        </div>
+                    @else
+                        <div class="w-14 h-14 mx-auto rounded-xl flex items-center justify-center mb-4 shadow-lg"
+                            style="background: linear-gradient(135deg, #4f46e5, #6366f1)">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                    @endif
+                    <h2 class="text-xl font-bold text-slate-800">{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}
+                    </h2>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/60 p-8">

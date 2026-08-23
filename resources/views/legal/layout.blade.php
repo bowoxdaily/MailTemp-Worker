@@ -26,7 +26,8 @@
                 aria-label="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }} home">
                 @if (\App\Models\Setting::get('app_logo_url'))
                     <img src="{{ \App\Models\Setting::get('app_logo_url') }}"
-                        alt="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}" class="h-9 w-auto">
+                        alt="{{ \App\Models\Setting::get('app_name', 'EmailTemp') }}"
+                        style="height: {{ (int) \App\Models\Setting::get('app_logo_height', 36) }}px; width: auto; max-height: 100px;">
                 @else
                     <div
                         class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#00a8e8] to-sky-500 shadow-md shadow-sky-100/30 group-hover:scale-105 transition-transform duration-200">

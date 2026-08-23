@@ -1,10 +1,22 @@
 <?php
 
+use App\Http\Controllers\SetupController;
 use App\Models\Domain;
+use App\Models\User;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/setup', [SetupController::class, 'index'])->name('setup.index');
+Route::post('/setup', [SetupController::class, 'store'])->name('setup.store');
+Route::get('/setup/cloudflare', [SetupController::class, 'cloudflare'])->name('setup.cloudflare');
+Route::post('/setup/deploy-worker', [SetupController::class, 'deployWorker'])->name('setup.deploy-worker');
+Route::get('/setup/complete', [SetupController::class, 'complete'])->name('setup.complete');
+
 Route::get('/', function () {
+    if (! User::where('is_admin', true)->exists()) {
+        return redirect()->route('setup.index');
+    }
+
     $domains = Domain::where('is_active', true)->pluck('domain')->toArray();
 
     return view('home', compact('domains'));
@@ -55,17 +67,23 @@ foreach ($seoPages as $slug => $page) {
 }
 
 Route::get('/sitemap.xml', function () use ($seoPages) {
-    $urls = collect(['home', ...array_map(fn (string $slug): string => "seo.{$slug}", array_keys($seoPages))])
-        ->map(fn (string $route): string => '<url><loc>'.e(route($route)).'</loc><changefreq>weekly</changefreq><priority>'.($route === 'home' ? '1.0' : '0.8').'</priority></url>')
+    $legalRoutes = ['legal.terms', 'legal.privacy', 'legal.cookies', 'legal.contact'];
+
+    $mainUrls = collect(['home', ...array_map(fn(string $slug): string => "seo.{$slug}", array_keys($seoPages))])
+        ->map(fn(string $route): string => '<url><loc>' . e(route($route)) . '</loc><changefreq>weekly</changefreq><priority>' . ($route === 'home' ? '1.0' : '0.8') . '</priority></url>')
         ->implode('');
 
-    return response("<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">{$urls}</urlset>", 200, [
+    $legalUrls = collect($legalRoutes)
+        ->map(fn(string $route): string => '<url><loc>' . e(route($route)) . '</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>')
+        ->implode('');
+
+    return response("<?xml version=\"1.0\" encoding=\"UTF-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">{$mainUrls}{$legalUrls}</urlset>", 200, [
         'Content-Type' => 'application/xml; charset=UTF-8',
     ]);
 })->name('sitemap');
 
 Route::get('/robots.txt', function (): Response {
-    return response("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: ".url('/sitemap.xml')."\n", 200, [
+    return response("User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nSitemap: " . url('/sitemap.xml') . "\n", 200, [
         'Content-Type' => 'text/plain; charset=UTF-8',
     ]);
 })->name('robots');

@@ -1,6 +1,11 @@
 <?php
 
 use App\Models\Domain;
+use App\Models\User;
+
+beforeEach(function () {
+    User::factory()->create(['is_admin' => true]);
+});
 
 test('it can generate email with custom username and domain', function () {
     // Setup active domain

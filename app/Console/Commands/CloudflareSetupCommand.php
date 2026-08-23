@@ -89,8 +89,26 @@ class CloudflareSetupCommand extends Command
         if ($this->option('deploy')) {
             $this->info('Deploying secrets to Cloudflare...');
 
+            // Use local wrangler from node_modules to avoid npx PATH issues
             $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
-            $npx = $isWindows ? 'cmd /c npx' : 'npx';
+            $wranglerBin = $isWindows
+                ? 'node_modules\\.bin\\wrangler.cmd'
+                : 'node_modules/.bin/wrangler';
+
+            // Install node_modules if missing
+            if (! file_exists($workerDir.DIRECTORY_SEPARATOR.$wranglerBin)) {
+                $this->comment('Installing worker dependencies (npm install)...');
+                $npmCmd = $isWindows ? 'cmd /c npm install' : 'npm install';
+                $npmResult = Process::path($workerDir)->timeout(120)->run($npmCmd);
+                if (! $npmResult->successful()) {
+                    $this->error('Failed to install worker dependencies.');
+                    $this->error($npmResult->errorOutput() ?: $npmResult->output());
+
+                    return self::FAILURE;
+                }
+            }
+
+            $wrangler = $isWindows ? "cmd /c {$wranglerBin}" : $wranglerBin;
 
             // Get Cloudflare credentials from Settings or environment
             $apiToken = null;
@@ -103,7 +121,11 @@ class CloudflareSetupCommand extends Command
                 $accountId = env('CLOUDFLARE_ACCOUNT_ID');
             }
 
-            $env = [];
+            // Merge Cloudflare credentials with current system env so PATH/node remain available
+            $env = getenv();
+            if (is_array($env) === false) {
+                $env = [];
+            }
             if (! empty($apiToken)) {
                 $env['CLOUDFLARE_API_TOKEN'] = $apiToken;
             }
@@ -115,8 +137,9 @@ class CloudflareSetupCommand extends Command
             $this->comment('Setting BACKEND_URL secret...');
             $resultUrl = Process::path($workerDir)
                 ->env($env)
+                ->timeout(120)
                 ->input($backendUrl)
-                ->run("{$npx} wrangler secret put BACKEND_URL");
+                ->run("{$wrangler} secret put BACKEND_URL");
 
             if (! $resultUrl->successful()) {
                 $this->error('Failed to set BACKEND_URL secret on Cloudflare.');
@@ -131,8 +154,9 @@ class CloudflareSetupCommand extends Command
             $this->comment('Setting WORKER_SECRET secret...');
             $resultSecret = Process::path($workerDir)
                 ->env($env)
+                ->timeout(120)
                 ->input($secret)
-                ->run("{$npx} wrangler secret put WORKER_SECRET");
+                ->run("{$wrangler} secret put WORKER_SECRET");
 
             if (! $resultSecret->successful()) {
                 $this->error('Failed to set WORKER_SECRET secret on Cloudflare.');
@@ -146,7 +170,8 @@ class CloudflareSetupCommand extends Command
             $this->info('Deploying Cloudflare Worker...');
             $resultDeploy = Process::path($workerDir)
                 ->env($env)
-                ->run("{$npx} wrangler deploy");
+                ->timeout(120)
+                ->run("{$wrangler} deploy");
 
             if (! $resultDeploy->successful()) {
                 $this->error('Failed to deploy Cloudflare Worker.');
