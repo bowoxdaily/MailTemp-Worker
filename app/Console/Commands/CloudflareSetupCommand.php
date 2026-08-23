@@ -81,10 +81,15 @@ class CloudflareSetupCommand extends Command
 
         // Try fixing permissions if not writable
         if (! is_writable($workerDir)) {
-            @chmod($workerDir, 0775);
+            @chmod($workerDir, 0777);
         }
         if (file_exists($devVarsPath) && ! is_writable($devVarsPath)) {
-            @chmod($devVarsPath, 0664);
+            @chmod($devVarsPath, 0666);
+        }
+        $cacheDir = $workerDir.'/node_modules/.cache';
+        if (is_dir($cacheDir)) {
+            @chmod($cacheDir, 0777);
+            @chmod($cacheDir.'/wrangler', 0777);
         }
 
         $devVarsContent = "BACKEND_URL={$backendUrl}\nWORKER_SECRET={$secret}\n";

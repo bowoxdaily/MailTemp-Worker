@@ -47,12 +47,20 @@
     @if ($logoUrl)
         <meta name="twitter:image" content="{{ $logoUrl }}">
     @endif
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+        rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+            rel="stylesheet">
+    </noscript>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -314,12 +322,14 @@
                     <div class="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-2 hidden sm:block"></div>
                     <button type="button" @click="dark = !dark; localStorage.setItem('theme', dark ? 'dark' : 'light')"
                         class="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                        :title="dark ? 'Mode terang' : 'Mode gelap'">
+                        :title="dark ? 'Mode terang' : 'Mode gelap'"
+                        :aria-label="dark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap'">
                         <svg x-show="!dark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
-                        <svg x-show="dark" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg x-show="dark" class="w-5 h-5" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
@@ -404,7 +414,7 @@
                                                 aria-label="Username kustom">
                                             <button @click="randomizeUsername()"
                                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-brand-500 dark:text-slate-600 dark:hover:text-brand-400 transition-colors"
-                                                title="Acak username">
+                                                title="Acak username" aria-label="Acak username">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -533,7 +543,7 @@
                                         </span>
                                         <button @click="refresh()" :disabled="refreshing"
                                             class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-brand-500 transition-all disabled:opacity-50"
-                                            title="Refresh">
+                                            title="Refresh" aria-label="Muat ulang kotak masuk">
                                             <svg class="w-4 h-4" :class="refreshing && 'animate-spin'" fill="none"
                                                 stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -542,7 +552,7 @@
                                         </button>
                                         <button @click="deleteEmail()"
                                             class="p-2 rounded-lg border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-500 transition-all"
-                                            title="Hapus">
+                                            title="Hapus" aria-label="Hapus alamat email">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -635,7 +645,7 @@
                                             </div>
                                             <button @click="deleteMessage(selectedMessage.id)"
                                                 class="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
-                                                title="Hapus">
+                                                title="Hapus" aria-label="Hapus pesan ini">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor"
                                                     viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -1190,7 +1200,8 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 break-all font-mono" x-text="email"></p>
             <div class="bg-white p-3 rounded-xl inline-block shadow-inner mb-4">
                 <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(email || '')}`"
-                    alt="QR Code" class="w-44 h-44 mx-auto rounded">
+                    alt="QR Code Alamat Email" width="176" height="176" loading="lazy"
+                    class="w-44 h-44 mx-auto rounded">
             </div>
             <div>
                 <button type="button" @click="showQr = false"
