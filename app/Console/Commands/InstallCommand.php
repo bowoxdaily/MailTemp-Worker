@@ -33,6 +33,9 @@ class InstallCommand extends Command
         $this->line('  6. Deploy Cloudflare Worker lalu arahkan Catch-All Email Routing ke worker.');
         $this->newLine();
 
+        // 0. Check & fix permissions
+        $this->checkAndFixPermissions();
+
         // 1. Environment file
         if (! file_exists(base_path('.env'))) {
             copy(base_path('.env.example'), base_path('.env'));
@@ -104,6 +107,57 @@ class InstallCommand extends Command
         $this->line('  7. Lihat cloudflare/README.md untuk panduan Cloudflare lengkap');
 
         return self::SUCCESS;
+    }
+
+    private function checkAndFixPermissions(): void
+    {
+        $directories = [
+            storage_path(),
+            storage_path('app'),
+            storage_path('app/public'),
+            storage_path('framework'),
+            storage_path('framework/cache'),
+            storage_path('framework/cache/data'),
+            storage_path('framework/sessions'),
+            storage_path('framework/views'),
+            storage_path('logs'),
+            base_path('bootstrap/cache'),
+        ];
+
+        $failed = [];
+
+        foreach ($directories as $dir) {
+            if (! is_dir($dir)) {
+                @mkdir($dir, 0775, true);
+            }
+
+            if (! is_writable($dir)) {
+                @chmod($dir, 0775);
+            }
+
+            if (! is_writable($dir)) {
+                $failed[] = $dir;
+            }
+        }
+
+        // Test temp directory
+        $sysTemp = sys_get_temp_dir();
+        $tempFile = @tempnam($sysTemp, 'mailtemp_');
+        if ($tempFile && file_exists($tempFile)) {
+            @unlink($tempFile);
+        } else {
+            $failed[] = "System temp directory ({$sysTemp}) is not writable or restricted by open_basedir";
+        }
+
+        if (empty($failed)) {
+            $this->components->info('Storage and temporary directory permissions verified (Read/Write OK).');
+        } else {
+            $this->components->warn('Permission warnings detected:');
+            foreach ($failed as $item) {
+                $this->line("  - {$item}");
+            }
+            $this->line('  Tip for Linux/aaPanel: sudo chown -R www-data:www-data storage bootstrap/cache && sudo chmod -R 775 storage bootstrap/cache');
+        }
     }
 
     private function configureDatabaseEnv(): void
@@ -191,7 +245,7 @@ class InstallCommand extends Command
         $email = text('Admin email', default: 'admin@emailtemp.com');
         $adminPassword = password('Admin password', hint: 'min 8 characters');
 
-        if (strlen($adminPassword) < 8) {
+        if (empty($adminPassword) || strlen($adminPassword) < 8) {
             $this->components->error('Password must be at least 8 characters.');
 
             return;
@@ -211,11 +265,23 @@ class InstallCommand extends Command
 
     private function addDomain(): void
     {
-        $domain = text('Domain name', placeholder: 'example.com', validate: function (string $value): ?string {
-            return filter_var($value, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)
-                ? null
-                : 'Enter valid domain, for example example.com.';
-        });
+        $domain = text(
+            label: 'Domain name',
+            placeholder: 'example.com',
+            default: '',
+            validate: function (string $value): ?string {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    return null;
+                }
+
+                return filter_var($trimmed, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)
+                    ? null
+                    : 'Enter valid domain, for example example.com.';
+            }
+        );
+
+        $domain = trim($domain);
 
         if (empty($domain)) {
             $this->components->warn('No domain entered, skipping.');

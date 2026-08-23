@@ -89,3 +89,14 @@ test('install command rejects short admin password', function () {
 
     expect(User::where('email', 'short@test.com')->exists())->toBeFalse();
 });
+
+test('install command handles empty domain smoothly without exception', function () {
+    artisan('app:install')
+        ->expectsConfirmation('Configure database connection?', 'no')
+        ->expectsConfirmation('Run database migrations?', 'no')
+        ->expectsConfirmation('Create admin user?', 'no')
+        ->expectsConfirmation('Add email domain?', 'yes')
+        ->expectsQuestion('Domain name', '')
+        ->expectsConfirmation('Install & build frontend assets (npm install && npm run build)?', 'no')
+        ->assertExitCode(0);
+});
