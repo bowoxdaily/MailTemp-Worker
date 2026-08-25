@@ -35,7 +35,11 @@ class CloudflareSetupCommand extends Command
         // 1. Determine Backend URL
         $backendUrl = config('app.url');
         if (empty($backendUrl) || $backendUrl === 'http://localhost') {
-            $backendUrl = $this->ask('What is your Laravel app backend URL?', $backendUrl ?: 'http://localhost:8000');
+            if ($this->input->isInteractive()) {
+                $backendUrl = $this->ask('What is your Laravel app backend URL?', $backendUrl ?: 'http://localhost:8000');
+            } else {
+                $backendUrl = $backendUrl ?: 'http://localhost:8000';
+            }
         }
         $backendUrl = rtrim(trim($backendUrl), '/');
 
@@ -115,40 +119,17 @@ class CloudflareSetupCommand extends Command
 
             $this->info('Deploying secrets to Cloudflare...');
 
-            // Use local wrangler from node_modules to avoid npx PATH issues
             $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
-            $wranglerBin = $isWindows
-                ? 'node_modules\\.bin\\wrangler.cmd'
-                : 'node_modules/.bin/wrangler';
 
-            // Install node_modules if missing
-            if (! file_exists($workerDir.DIRECTORY_SEPARATOR.$wranglerBin)) {
-                $this->comment('Installing worker dependencies (npm install)...');
-                $npmCmd = $isWindows ? 'cmd /c npm install' : 'npm install';
-                $npmResult = Process::path($workerDir)->timeout(120)->run($npmCmd);
-                if (! $npmResult->successful()) {
-                    $this->error('Failed to install worker dependencies.');
-                    $this->error($npmResult->errorOutput() ?: $npmResult->output());
-
-                    return self::FAILURE;
-                }
-            }
-
-            $wrangler = $isWindows ? "cmd /c {$wranglerBin}" : $wranglerBin;
-
-            // Get Cloudflare credentials from Settings or environment
-            $apiToken = null;
-            $accountId = null;
-            try {
-                $apiToken = Setting::get('cloudflare_api_token') ?: env('CLOUDFLARE_API_TOKEN');
-                $accountId = Setting::get('cloudflare_account_id') ?: env('CLOUDFLARE_ACCOUNT_ID');
-            } catch (\Exception $e) {
-                $apiToken = env('CLOUDFLARE_API_TOKEN');
-                $accountId = env('CLOUDFLARE_ACCOUNT_ID');
-            }
-
-            // Find modern Node.js binary path (aaPanel / nvm / standard paths)
-            $nodePaths = [
+            // Find modern Node.js and npm paths (Windows / aaPanel / nvm / standard paths)
+            $nodePaths = $isWindows ? [
+                'C:\Program Files\nodejs',
+                'C:\Program Files (x86)\nodejs',
+                (getenv('ProgramFiles') ?: 'C:\Program Files').'\nodejs',
+                (getenv('ProgramFiles(x86)') ?: 'C:\Program Files (x86)').'\nodejs',
+                (getenv('APPDATA') ?: '').'\npm',
+                (getenv('LOCALAPPDATA') ?: '').'\Programs\node',
+            ] : [
                 '/www/server/nodejs/v22.*/bin',
                 '/www/server/nodejs/v20.*/bin',
                 '/www/server/nodejs/v18.*/bin',
@@ -164,27 +145,45 @@ class CloudflareSetupCommand extends Command
                 '/usr/local/bin',
                 '/usr/bin',
             ];
+
             $extraPaths = [];
             $preferredNodeBin = null;
+            $npmExecutable = null;
 
             foreach ($nodePaths as $pattern) {
-                $matches = glob($pattern);
+                if (empty($pattern)) {
+                    continue;
+                }
+                $matches = str_contains($pattern, '*') ? glob($pattern) : (is_dir($pattern) ? [$pattern] : []);
                 if ($matches) {
-                    rsort($matches);
+                    if (str_contains($pattern, '*')) {
+                        rsort($matches);
+                    }
                     foreach ($matches as $match) {
-                        $candidateNode = $match.DIRECTORY_SEPARATOR.'node';
-                        if (is_dir($match) && file_exists($candidateNode)) {
+                        $candidateNode = $match.DIRECTORY_SEPARATOR.($isWindows ? 'node.exe' : 'node');
+                        $candidateNpm = $match.DIRECTORY_SEPARATOR.($isWindows ? 'npm.cmd' : 'npm');
+                        if (is_dir($match)) {
                             $extraPaths[] = $match;
-                            if (! $preferredNodeBin) {
-                                // Check candidate version
-                                $testVer = @shell_exec("{$candidateNode} -v 2>&1");
-                                if ($testVer && preg_match('/v(\d+)/', $testVer, $m) && (int) $m[1] >= 16) {
-                                    $preferredNodeBin = $candidateNode;
-                                }
-                            }
+                        }
+                        if (! $preferredNodeBin && file_exists($candidateNode)) {
+                            $preferredNodeBin = $candidateNode;
+                        }
+                        if (! $npmExecutable && file_exists($candidateNpm)) {
+                            $npmExecutable = $candidateNpm;
                         }
                     }
                 }
+            }
+
+            // Get Cloudflare credentials from Settings or environment
+            $apiToken = null;
+            $accountId = null;
+            try {
+                $apiToken = Setting::get('cloudflare_api_token') ?: env('CLOUDFLARE_API_TOKEN');
+                $accountId = Setting::get('cloudflare_account_id') ?: env('CLOUDFLARE_ACCOUNT_ID');
+            } catch (\Exception $e) {
+                $apiToken = env('CLOUDFLARE_API_TOKEN');
+                $accountId = env('CLOUDFLARE_ACCOUNT_ID');
             }
 
             // Merge Cloudflare credentials and extended PATH
@@ -202,6 +201,32 @@ class CloudflareSetupCommand extends Command
             if (! empty($extraPaths)) {
                 $env['PATH'] = implode(PATH_SEPARATOR, array_unique(array_merge($extraPaths, explode(PATH_SEPARATOR, $currentPath))));
             }
+
+            // Use local wrangler from node_modules to avoid npx PATH issues
+            $wranglerBin = $isWindows
+                ? 'node_modules\\.bin\\wrangler.cmd'
+                : 'node_modules/.bin/wrangler';
+
+            // Install node_modules if missing
+            if (! file_exists($workerDir.DIRECTORY_SEPARATOR.$wranglerBin)) {
+                $this->comment('Installing worker dependencies (npm install)...');
+                if ($npmExecutable && $isWindows) {
+                    $npmCmd = "cmd /c \"\"{$npmExecutable}\" install\"";
+                } elseif ($isWindows) {
+                    $npmCmd = 'cmd /c npm install';
+                } else {
+                    $npmCmd = $npmExecutable ? "{$npmExecutable} install" : 'npm install';
+                }
+                $npmResult = Process::path($workerDir)->env($env)->timeout(120)->run($npmCmd);
+                if (! $npmResult->successful()) {
+                    $this->error('Failed to install worker dependencies.');
+                    $this->error($npmResult->errorOutput() ?: $npmResult->output());
+
+                    return self::FAILURE;
+                }
+            }
+
+            $wrangler = $isWindows ? "cmd /c {$wranglerBin}" : $wranglerBin;
 
             // If we have a verified node >= 16 binary, invoke wrangler entry script with it directly to bypass old system node
             $wranglerJs = $workerDir.'/node_modules/wrangler/bin/wrangler.js';

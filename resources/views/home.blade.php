@@ -947,6 +947,28 @@
                 </div>
             </div>
         </footer>
+
+        {{-- QR Code Modal --}}
+        <div x-show="showQr" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            @keydown.escape.window="showQr = false" @click.self="showQr = false">
+            <div
+                class="glass-card rounded-2xl border border-slate-200 dark:border-slate-700 p-6 max-w-sm w-full shadow-2xl text-center">
+                <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">QR Code Alamat Email</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 break-all font-mono" x-text="email"></p>
+                <div class="bg-white p-3 rounded-xl inline-block shadow-inner mb-4">
+                    <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(email || '')}`"
+                        alt="QR Code Alamat Email" width="176" height="176" loading="lazy"
+                        class="w-44 h-44 mx-auto rounded">
+                </div>
+                <div>
+                    <button type="button" @click="showQr = false"
+                        class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="application/ld+json">
@@ -1189,28 +1211,6 @@
             }
         }
     </script>
-
-    {{-- QR Code Modal --}}
-    <div x-show="showQr" x-cloak
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-        @keydown.escape.window="showQr = false" @click.self="showQr = false">
-        <div
-            class="glass-card rounded-2xl border border-slate-200 dark:border-slate-700 p-6 max-w-sm w-full shadow-2xl text-center">
-            <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">QR Code Alamat Email</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 break-all font-mono" x-text="email"></p>
-            <div class="bg-white p-3 rounded-xl inline-block shadow-inner mb-4">
-                <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(email || '')}`"
-                    alt="QR Code Alamat Email" width="176" height="176" loading="lazy"
-                    class="w-44 h-44 mx-auto rounded">
-            </div>
-            <div>
-                <button type="button" @click="showQr = false"
-                    class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">
-                    Tutup
-                </button>
-            </div>
-        </div>
-    </div>
 </body>
 
 </html>

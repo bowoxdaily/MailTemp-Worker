@@ -3,6 +3,16 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
+if (! defined('STDIN')) {
+    define('STDIN', fopen('php://stdin', 'r'));
+}
+if (! defined('STDOUT')) {
+    define('STDOUT', fopen('php://stdout', 'w'));
+}
+if (! defined('STDERR')) {
+    define('STDERR', fopen('php://stderr', 'w'));
+}
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...
