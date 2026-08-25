@@ -132,6 +132,49 @@
                     </div>
                 </div>
 
+                {{-- Favicon Upload & Storage --}}
+                @php
+                    $currentFaviconUrl = $settings['favicon_url']->value ?? null;
+                @endphp
+                <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-6" x-data="{
+                    previewUrl: '{{ $currentFaviconUrl ? $currentFaviconUrl : asset('favicon.svg') }}',
+                    removeFavicon: false,
+                    handleFileChange(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            this.previewUrl = URL.createObjectURL(file);
+                            this.removeFavicon = false;
+                        }
+                    }
+                }">
+                    <div class="sm:w-1/3">
+                        <label class="text-sm font-medium text-slate-700">Website Icon</label>
+                        <p class="text-xs text-slate-400 font-mono mt-0.5">favicon (storage/branding)</p>
+                        <p class="text-xs text-slate-400 mt-1">Format: ICO, PNG, SVG. Maksimal 1MB.</p>
+                    </div>
+                    <div class="sm:flex-1 space-y-3">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-4">
+                            <img :src="previewUrl" alt="Icon Preview" class="w-12 h-12 object-contain rounded-lg">
+                            <span class="text-xs text-slate-500">Icon browser dan bookmark.</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold cursor-pointer hover:bg-indigo-100 transition">
+                                <span>Pilih Icon</span>
+                                <input type="file" name="favicon" accept="image/x-icon,image/png,image/svg+xml" class="hidden"
+                                    @change="handleFileChange($event)">
+                            </label>
+                            <template x-if="previewUrl && !removeFavicon && '{{ $currentFaviconUrl }}'">
+                                <button type="button" @click="removeFavicon = true; $refs.removeFaviconInput.value = '1'"
+                                    class="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition">
+                                    Hapus Icon
+                                </button>
+                            </template>
+                            <input type="hidden" name="remove_favicon" x-ref="removeFaviconInput"
+                                :value="removeFavicon ? '1' : '0'">
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Footer Copyright --}}
                 <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
                     <div class="sm:w-1/3">

@@ -100,3 +100,25 @@ test('admin can upload brand logo file and remove it', function () {
     expect(Setting::get('app_logo_url'))->toBeNull();
     Storage::disk('public')->assertMissing($storedPath);
 });
+
+test('admin can upload favicon file and remove it', function () {
+    Storage::fake('public');
+    $admin = User::factory()->create(['is_admin' => true]);
+    $file = UploadedFile::fake()->create('favicon.png', 10, 'image/png');
+
+    $response = $this->actingAs($admin)->put(route('admin.settings.update'), [
+        'favicon' => $file,
+    ]);
+
+    $response->assertRedirect(route('admin.settings.index'));
+
+    $faviconUrl = Setting::get('favicon_url');
+    expect($faviconUrl)->not->toBeNull();
+    $storedPath = str_replace('/storage/', '', $faviconUrl);
+    Storage::disk('public')->assertExists($storedPath);
+
+    $this->actingAs($admin)->put(route('admin.settings.update'), ['remove_favicon' => '1']);
+
+    expect(Setting::get('favicon_url'))->toBeNull();
+    Storage::disk('public')->assertMissing($storedPath);
+});

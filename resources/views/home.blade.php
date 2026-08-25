@@ -15,7 +15,7 @@
             \App\Models\Setting::get('meta_keywords') ?:
             'temp mail, temporary email, email sementara, 10 minute mail, disposable email, generator email, otp email, fake mail';
         $logoUrl = \App\Models\Setting::get('app_logo_url');
-        $faviconUrl = \App\Models\Setting::get('app_favicon_url') ?: asset('favicon.ico');
+        $faviconUrl = \App\Models\Setting::get('favicon_url') ?: asset('favicon.svg');
     @endphp
     <title>{{ $metaTitle }}</title>
     <meta name="description" content="{{ $metaDescription }}">
@@ -686,8 +686,8 @@
                                         <div class="px-5 py-5">
                                             <template x-if="selectedMessage.body_html">
                                                 <iframe class="email-frame rounded-lg" title="Email content"
-                                                    sandbox="allow-same-origin"
-                                                    :srcdoc="selectedMessage.body_html"></iframe>
+                                                    sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                                                    :srcdoc="prepareEmailHtml(selectedMessage.body_html)"></iframe>
                                             </template>
                                             <template x-if="!selectedMessage.body_html && selectedMessage.body_text">
                                                 <pre class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans"
@@ -1097,6 +1097,17 @@
                     } catch (e) {
                         this.error = 'Pesan gagal dibuka. Coba lagi.';
                     }
+                },
+
+                prepareEmailHtml(html) {
+                    const document = new DOMParser().parseFromString(html, 'text/html');
+
+                    document.querySelectorAll('a[href]').forEach((link) => {
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                    });
+
+                    return document.documentElement.outerHTML;
                 },
 
                 async deleteMessage(id) {
