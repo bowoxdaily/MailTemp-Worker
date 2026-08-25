@@ -111,36 +111,102 @@ class EmailReceiveService
 
     private function sanitizeHtml(?string $html): ?string
     {
-        if ($html === null || $html === '') {
+        if ($html === null || trim($html) === '') {
             return $html;
         }
 
         $document = new \DOMDocument;
         libxml_use_internal_errors(true);
-        $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $document->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
 
-        $allowed = ['a', 'b', 'blockquote', 'br', 'code', 'div', 'em', 'i', 'li', 'ol', 'p', 'pre', 'span', 'strong', 'table', 'tbody', 'td', 'th', 'thead', 'tr', 'u', 'ul'];
-        $nodes = iterator_to_array($document->getElementsByTagName('*'));
-        foreach ($nodes as $node) {
-            if (! in_array(strtolower($node->nodeName), $allowed, true)) {
-                $node->parentNode?->removeChild($node);
+        // Strip forbidden tags completely (including their inner content)
+        $disallowedTags = ['script', 'iframe', 'object', 'embed', 'applet', 'frame', 'frameset', 'form', 'input', 'button', 'textarea', 'select', 'link', 'base'];
+        foreach ($disallowedTags as $tag) {
+            $elements = iterator_to_array($document->getElementsByTagName($tag));
+            foreach ($elements as $el) {
+                $el->parentNode?->removeChild($el);
+            }
+        }
+
+        // Whitelisted HTML tags in rich emails
+        $allowedTags = [
+            'html', 'head', 'body', 'meta', 'title', 'style',
+            'div', 'p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'br', 'pre', 'code',
+            'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'del', 'small', 'sub', 'sup', 'blockquote', 'center', 'font',
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+            'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+            'a', 'img',
+        ];
+
+        // Safe attributes
+        $allowedAttributes = [
+            'class', 'id', 'style', 'width', 'height', 'align', 'valign',
+            'bgcolor', 'color', 'border', 'cellpadding', 'cellspacing',
+            'colspan', 'rowspan', 'alt', 'title', 'target', 'rel', 'src', 'href', 'dir', 'lang',
+        ];
+
+        $allElements = iterator_to_array($document->getElementsByTagName('*'));
+        foreach ($allElements as $node) {
+            $nodeName = strtolower($node->nodeName);
+            if (! in_array($nodeName, $allowedTags, true)) {
+                $parent = $node->parentNode;
+                if ($parent) {
+                    while ($node->firstChild) {
+                        $parent->insertBefore($node->firstChild, $node);
+                    }
+                    $parent->removeChild($node);
+                }
 
                 continue;
             }
 
-            foreach (iterator_to_array($node->attributes) as $attribute) {
-                $name = strtolower($attribute->name);
-                $value = trim($attribute->value);
-                if (
-                    str_starts_with($name, 'on') || $name === 'style'
-                    || ($name === 'href' && ! preg_match('/^(https?:|mailto:)/i', $value))
-                ) {
-                    $node->removeAttribute($attribute->name);
+            if ($node->hasAttributes()) {
+                foreach (iterator_to_array($node->attributes) as $attribute) {
+                    $attrName = strtolower($attribute->name);
+                    $attrValue = trim($attribute->value);
+
+                    // Disallow event handlers (on*) or unallowed attributes
+                    if (str_starts_with($attrName, 'on') || ! in_array($attrName, $allowedAttributes, true)) {
+                        $node->removeAttribute($attribute->name);
+
+                        continue;
+                    }
+
+                    // Check href safe protocols and enforce target/rel
+                    if ($attrName === 'href') {
+                        if (! preg_match('/^(https?:|mailto:|tel:|#|\/)/i', $attrValue)) {
+                            $node->removeAttribute($attribute->name);
+
+                            continue;
+                        }
+                        $node->setAttribute('target', '_blank');
+                        $node->setAttribute('rel', 'noopener noreferrer nofollow');
+                    }
+
+                    // Check src safe protocols
+                    if ($attrName === 'src') {
+                        if (! preg_match('/^(https?:|data:image\/|cid:|\/)/i', $attrValue)) {
+                            $node->removeAttribute($attribute->name);
+
+                            continue;
+                        }
+                    }
+
+                    // Sanitize inline style from expression or javascript execution
+                    if ($attrName === 'style') {
+                        if (preg_match('/(expression|javascript:|behavior|vbscript:|-moz-binding)/i', $attrValue)) {
+                            $node->removeAttribute($attribute->name);
+
+                            continue;
+                        }
+                    }
                 }
             }
         }
 
-        return $document->saveHTML() ?: null;
+        $cleanHtml = $document->saveHTML();
+
+        return $cleanHtml ? trim($cleanHtml) : null;
     }
 }
